@@ -32,15 +32,85 @@ public class BabystepsTimer {
 
 	private static final long SECONDS_IN_CYCLE = 120;
 
-	private static JFrame timerFrame;
-	private static JTextPane timerPane;
-	private static boolean timerRunning;
+	private JFrame timerFrame;
+	private JTextPane timerPane;
+	boolean timerRunning;
 	private static long currentCycleStartTime;
 	private static String lastRemainingTime;
 	private static String bodyBackgroundColor = BACKGROUND_COLOR_NEUTRAL;
 	
 	private static DecimalFormat twoDigitsFormat = new DecimalFormat("00");
 
+
+	public void launch() {
+		timerFrame = new JFrame("Babysteps Timer");
+		timerFrame.setUndecorated(true);
+
+		timerFrame.setSize(250, 120);
+		timerFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		timerPane = new JTextPane();
+		timerPane.setContentType("text/html");
+		timerPane.setText(createTimerHtml(getRemainingTimeCaption(0L), BACKGROUND_COLOR_NEUTRAL, false));
+		timerPane.setEditable(false);
+		timerPane.addMouseMotionListener(new MouseMotionListener() {
+			private int lastX;
+			private int lastY;
+
+			@Override
+			public void mouseMoved(final MouseEvent e) {
+				lastX = e.getXOnScreen();
+				lastY = e.getYOnScreen();
+			}
+
+			@Override
+			public void mouseDragged(final MouseEvent e) {
+				int x = e.getXOnScreen();
+				int y = e.getYOnScreen();
+
+				timerFrame.setLocation(timerFrame.getLocation().x + (x-lastX), timerFrame.getLocation().y + (y-lastY));
+
+				lastX = x;
+				lastY = y;
+			}
+		});
+		timerPane.addHyperlinkListener(new HyperlinkListener() {
+			@Override
+			public void hyperlinkUpdate(final HyperlinkEvent e) {
+				if(e.getEventType() == HyperlinkEvent.EventType.ACTIVATED) {
+					if("command://start".equals(e.getDescription())) {
+						timerFrame.setAlwaysOnTop(true);
+						timerPane.setText(createTimerHtml(getRemainingTimeCaption(0L), BACKGROUND_COLOR_NEUTRAL, true));
+						timerFrame.repaint();
+						new TimerThread().start();
+					} else if("command://stop".equals(e.getDescription())) {
+						timerRunning = false;
+						timerFrame.setAlwaysOnTop(false);
+						timerPane.setText(createTimerHtml(getRemainingTimeCaption(0L), BACKGROUND_COLOR_NEUTRAL, false));
+						timerFrame.repaint();
+					} else  if("command://reset".equals(e.getDescription())) {
+						currentCycleStartTime = System.currentTimeMillis();
+						bodyBackgroundColor=BACKGROUND_COLOR_PASSED;
+					} else  if("command://quit".equals(e.getDescription())) {
+						System.exit(0);
+					}
+				}
+			}
+		});
+		timerFrame.getContentPane().add(timerPane);
+
+		timerFrame.setVisible(true);
+
+	}
+
+	public JTextPane getTimerPane() {
+		return timerPane;
+	}
+
+	public JFrame getTimerFrame() {
+		return timerFrame;
+	}
+
+	/*
 	public static void main(final String[] args) throws InterruptedException {
 		timerFrame = new JFrame("Babysteps Timer");
 		timerFrame.setUndecorated(true);
@@ -99,6 +169,7 @@ public class BabystepsTimer {
 
 		timerFrame.setVisible(true);
 	}
+*/
 
 	private static String getRemainingTimeCaption(final long elapsedTime) {
 		long elapsedSeconds = elapsedTime/1000;
@@ -141,7 +212,7 @@ public class BabystepsTimer {
 		}).start();
 	}
 
-	private static final class TimerThread extends Thread {
+	private  final class TimerThread extends Thread {
 		@Override
 		public void run() {
 			timerRunning = true;
